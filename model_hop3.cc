@@ -2,19 +2,37 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/common.hh>
+#include <gazebo/transport/transport.hh>
+#include <gazebo/msgs/msgs.hh>
+#include <gazebo/gazebo_client.hh>
+#include "gazebo/sensors/sensors.hh"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <math.h>
+//#include "ros/ros.h"
+#include "Eigen/Core"
+#include "Eigen/Geometry"
+
+using namespace Eigen;
 
 namespace gazebo
 {
   int n;
+  unsigned int contactsPacketSize = 0;
+  unsigned int contactGroupSize = 0;
   double a = 0;
   double c = 0;
   double m = 0.0001;
   double x = 0.1;
   double y = 0;
+  double alpha = 0;
+  double beta = 0;
+  double gamma = 0;
+  double delta = 0; 
+  double roll = 0; 
+  double pitch = 0; 
+  double yaw = 0; 
   double x1 = 0;
   double x2 = 0;
   double x3 = 0;
@@ -32,13 +50,20 @@ namespace gazebo
   int flag = 0;
   int sw = 0;
   int input = 's';
-  int i = 0;
+  unsigned int i = 0;
+  
+
   gazebo::math::Pose pose;
   math::Vector3 v(0,0,0);
   gazebo::math::Vector3 vel;
+  math::Quaternion rot;
+  Eigen::Quaterniond euler;
+  Matrix3d m2;
+  Vector3d ea; 
 
   class ModelPush : public ModelPlugin
   {
+    gazebo::sensors::ContactSensorPtr parentSensor;
     public: void Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/)
     {
       // Store the pointer to the model
@@ -50,6 +75,13 @@ namespace gazebo
           boost::bind(&ModelPush::OnUpdate, this, _1));
     }
 
+  void cb(ConstWorldStatisticsPtr &_msg)
+  {
+      // Dump the message contents to stdout.
+      //std::cout << _msg->DebugString();
+      
+  }
+ 
     int kbhit(void)
 {
     struct termios oldt, newt;
@@ -90,6 +122,12 @@ namespace gazebo
         return c;
     } 
 
+    // only use this function when using ros  
+    /*void GetRPY(const geometry_msgs::Quaternion &q, double &roll,double &pitch,double &yaw)
+  	{
+ 	 tf::Quaternion quat(q.x,q.y,q.z,q.w);
+ 	 tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+	}*/
     //public: void dBodySetTorque(this, 1000, 0, 0)
     // Called by the world update start event
     public: void OnUpdate(const common::UpdateInfo & /*_info*/)
@@ -102,10 +140,19 @@ namespace gazebo
 //if (kbhit()) c = getch();
       pose = this->model->GetWorldPose();
       v = pose.pos;
-      vel = this->model->GetRelativeLinearVel();
+      rot = pose.rot;
+      vel = this->model->GetWorldLinearVel();
       //t = this->model->GetRelativeLinearVel();
       x = v.x;
       y = v.y;
+      alpha = rot.x;
+      beta = rot.y;
+      gamma = rot.z;
+      delta = rot.w;
+      euler.x() = alpha;
+      euler.y() = beta;
+      euler.z() = gamma;
+      euler.w() = delta;
       theta = atan2(y,x);
       //fx = m * sigma * (r*x-y-x*z-sigma*y+sigma*x);
       //fy = m*r*sigma*(y-x)-m*r*x+m*y+m*x*z-m*sigma*z*(y-x)-m*x*(-b*z+x*y);
@@ -118,7 +165,45 @@ namespace gazebo
       vx = vel.x;
       vy = vel.y;
       vz = vel.z;
+     
+      //tf::Quaternion quat(alpha,beta,gamma,delta);
+      //tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
  
+      Matrix3d m2 = euler.toRotationMatrix();
+      Vector3d ea = m2.eulerAngles(0, 1, 2);
+      alpha = ea(0);
+      beta = ea(1);
+      gamma = ea(2);
+
+      msgs::Contacts contacts;
+      contacts = this->parentSensor->Contacts();
+
+      contactsPacketSize = contacts.contact_size();
+      double force_x[contactsPacketSize];
+      double force_y[contactsPacketSize];
+      double force_z[contactsPacketSize];
+      double contactforce_x = 0;
+      double contactforce_y = 0;
+      double contactforce_z = 0;
+      for(i = 0;i < contactsPacketSize; ++i)
+      {
+         gazebo::msgs::Contact contact = contacts.contact(i);
+	 contactGroupSize = contact.position_size();
+         for(unsigned int j = 0;j < contactGroupSize;j++)
+         {
+            force_x[j] = contact.wrench(j).body_1_wrench().force().x();
+            force_y[j] = contact.wrench(j).body_1_wrench().force().y();
+            force_z[j] = contact.wrench(j).body_1_wrench().force().z();
+  	    contactforce_x += force_x[j];         
+  	    contactforce_y += force_y[j];         
+  	    contactforce_z += force_z[j];
+
+         }
+
+      }
+
+      printf("Contact Force: %lf %lf %lf\n",contactforce_x, contactforce_y, contactforce_z);         
+      //GetRPY(rot); 
       //fx = m*sigma*(r*x-y-sigma*y+sigma*x);
       //fy = m*r*sigma*(y-x)-m*r*x+m*y-m*x*x*y;
       //this->model->SetLinearVel(math::Vector3(vx, vy, vz));
@@ -130,6 +215,9 @@ namespace gazebo
         		   // Apply a small linear velocity to the model.
         		   this->model->GetLink("link")->SetTorque(math::Vector3(50, 0, 0));
                            //this->model->GetLink("link")->SetTorque(math::Vector3(fx, fy, 0));
+                           printf("%lf %lf %lf\n",vx, vy, vz);
+                           printf("%lf %lf\n",x, y);
+                           printf("%lf %lf %lf\n",alpha, beta, gamma);
            		   flag = flag + 1;
                            x1 = x1 + (a*sin(x3)+c*cos(x2))*delta_t;
       			   x2 = x2 + (b*sin(x1)+a*cos(x3))*delta_t;
@@ -139,6 +227,9 @@ namespace gazebo
             else
         		{
         		   this->model->GetLink("link")->SetTorque(math::Vector3(0, 0, 0));
+                           printf("%lf %lf %lf\n",vx, vy, vz);
+                           printf("%lf %lf\n",x, y);
+                           printf("%lf %lf %lf\n",alpha, beta, gamma);
                            x1 = x1 + (a*sin(x3)+c*cos(x2))*delta_t;
       			   x2 = x2 + (b*sin(x1)+a*cos(x3))*delta_t;
       			   x3 = x3 + (c*sin(x2)+b*cos(x1))*delta_t;
