@@ -1,0 +1,124 @@
+<?xml version="1.0"?>
+<robot 
+    name="box_t">
+  <link 
+    name="base_link">
+    <collision name="collision">
+      <origin xyz="0 0 0.5" rpy="0 0 0"/>
+      <geometry>
+        <box size="1 1 1"/>
+      </geometry>
+    </collision>
+    <visual>
+      <origin xyz="0 0 0.5" rpy="0 0 0"/>
+      <geometry>
+        <box size="1 1 1"/>
+      </geometry>
+    </visual>
+    <inertial>
+      <origin xyz="0 0 0.5" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia
+        ixx="1.0" ixy="0.0" ixz="0.0"
+        iyy="1.0" iyz="0.0"
+        izz="1.0"/>
+    </inertial>
+  </link>
+ <!--  <link name="base_footprint"/>
+   <gazebo reference="base_footprint">
+      	   <material>Gazebo/Blue</material>
+           <gravity>true</gravity>
+	   <mu1>0.0</mu1>
+      	   <mu2>0.0</mu2>
+           <selfCollide>true</selfCollide>
+           <maxContacts>10</maxContacts>
+      	   <maxVel>100000</maxVel>
+      	   <minDepth>0</minDepth>
+      	   <kp>10000</kp>
+      	   <kd>10</kd>
+      <sensor name="my_contact" type="contact">
+        <parent link="base_footprint"/>
+        <visualize>true</visualize>
+        <plugin name="my_contact" filename="libmy_contact.so"/>
+      </sensor>
+   </gazebo>-->
+
+   <gazebo reference="base_link">
+	   <mu1>0.0</mu1>
+      	   <mu2>0.0</mu2>
+           <selfCollide>true</selfCollide>
+           <maxContacts>10</maxContacts>
+           <maxVel>100000</maxVel>
+      	   <minDepth>0</minDepth>
+      	   <kp>10000</kp>
+      	   <kd>10</kd>
+      <!--<sensor name="my_contact" type="contact">
+        <parent link="base_footprint"/>
+        <visualize>true</visualize>
+        <plugin name="my_contact" filename="libmy_contact.so"/>
+      </sensor>-->
+   </gazebo>
+
+   <!--<joint name="base_joint" type="fixed">
+      <parent link="base_footprint"/>
+      <child link="base_link"/>
+           <dynamics friction="1"/>
+   </joint>
+
+   <gazebo reference="base_joint">
+           <stopCfm>0.5</stopCfm>
+           <stopErp>0.5</stopErp>
+           <implicitSpringDamper>true</implicitSpringDamper>
+   </gazebo>-->
+     
+   <!-- <gazebo reference="base_link">
+      <plugin name="model_hop" filename="libmodel_hop.so">
+      </plugin>
+      <mu1>0.1</mu1>
+      <mu2>0.1</mu2>
+      <kp>1e+12</kp>
+      <kd>0</kd>
+      <sensor name="my_contact" type="contact">
+        <parent link="base_footprint"/>
+        <visualize>/true</visualize>
+        <plugin name="contact" filename="libcontact.so"/>
+      </sensor>
+   </gazebo>-->
+
+   <!-- <sensor name="my_contact" type="contact">
+      <parent link="base_footprint"/>
+      <visualize>/true</visualize>
+      <plugin name="contact" filename="libcontact.so"/>
+    </sensor>-->
+
+ <!-- <link name="base_footprint">
+    <gazebo reference="base_footprint">
+      <plugin name="model_hop" filename="libmodel_hop.so">
+      </plugin>
+      <mu1>0.1</mu1>
+      <mu2>0.1</mu2>
+      <kp>1e+12</kp>
+      <kd>0</kd>
+      <sensor name="my_contact" type="contact">
+        <parent link="base_footprint"/>
+        <visualize>/false</visualize>
+        <plugin name="my_contact" filename="libmy_contact.so"/>
+      </sensor>
+   </gazebo>
+  </link>
+  <joint name="base_joint" type="fixed">
+	<parent link="base_footprint"/>
+	<child link="base_link"/>
+        <gazebo reference="base_joint">
+          <plugin name="model_hop" filename="libmodel_hop.so"/>
+        <plugin name="my_contact" filename="libmy_contact.so"/>
+        </gazebo>
+  </joint>-->
+ <gazebo>
+	<plugin name="model_hop" filename="libmodel_hop.so"/>
+         <plugin name="gazebo_visual_plugin" filename="libgazebo_visual_plugin.so"/> 
+        <plugin name="my_contact" filename="libmy_contact.so"/>
+
+  </gazebo>
+  
+</robot>
